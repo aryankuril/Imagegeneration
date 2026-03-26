@@ -108,6 +108,49 @@ const cardsData: CardData[] = [
   />
 ),
   },
+    {
+    title: "Ready Components",
+    description: "Production ready React, Next.js, Tailwind components to copy, customize, ship faster.",
+    image: "/images/calculator/Web-Development.png",
+    buttonText: "Try Now",
+    href: "https://readycomponents.bombayblokes.com",
+      icon: (
+  <img
+    src="/images/readycomponent.svg"
+    alt="Image Effects"
+    width={60}
+    height={60}
+  />
+),
+  },
+    {
+    title: "Figma Components",
+    description: "Ready to use Figma components and design systems for faster design.",    image: "/images/calculator/Web-Development.png",
+    buttonText: "Try Now",
+    href: "https://www.figma.com/@bombayblokes",
+    icon: (
+  <img
+    src="/images/figmacomponent2.svg"
+    alt="Image Effects"
+    width={60}
+    height={60}
+  />
+),
+  },
+    {
+    title: "Expense Tracker",
+    description: "Simple expense tracker to manage spending, track finances, and gain insights.",    image: "/images/calculator/Web-Development.png",
+    buttonText: "Try Now",
+    href: "https://expenses.bombayblokes.com",
+    icon: (
+  <img
+    src="/images/expense2.svg"
+    alt="Image Effects"
+    width={60}
+    height={60}
+  />
+),
+  },
 ];
 
 const SecondSection = () => {
