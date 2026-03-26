@@ -34,11 +34,51 @@ const ThirdSection = () => {
             </h2>
 
             {/* Contact Info */}
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-5 body3 white-text px-4 lg:p-0">
-              <a href="mailto:hello@bombayblokes.com">hello@bombayblokes.com</a>
-              <span>|</span>
-              <a href="tel:+919987558189">+91 99875 58189</a>
-            </div>
+             <div className="flex flex-col items-center justify-center gap-4 body3 white-text px-4 lg:p-0">
+
+  {/* Projects */}
+  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1 text-center sm:text-left">
+    <span>For Projects and Gossip :</span>
+
+    <a
+      href="mailto:hello@bombayblokes.com"
+      className="text-highlight sm:ml-1"
+    >
+      hello@bombayblokes.com
+    </a>
+
+    <span className="hidden sm:inline"> | </span>
+
+    <a
+      href="tel:+919987558189"
+      className="text-highlight"
+    >
+      9987558189
+    </a>
+  </div>
+
+  {/* Careers */}
+  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1 text-center sm:text-left">
+    <span>For Careers / Jobs :</span>
+
+    <a
+      href="mailto:careers@bombayblokes.com"
+      className="text-highlight sm:ml-1"
+    >
+      careers@bombayblokes.com
+    </a>
+
+    <span className="hidden sm:inline"> | </span>
+
+    <a
+      href="tel:+917738551454"
+      className="text-highlight"
+    >
+      7738551454
+    </a>
+  </div>
+
+</div>
           </div>
         </div>
 
