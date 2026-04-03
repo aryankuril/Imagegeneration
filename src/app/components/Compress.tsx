@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { DialogDescription } from "@/components/ui/dialog";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ import { saveAs } from "file-saver";
 import { ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
 import {  Filter } from "@/components/ui/image-effects";
 import Image from "next/image";
-import { clsx } from 'clsx';
+
 
 type CompressionLevel = "1x" | "2x" | "3x" | "4x" | "custom";
 type WatermarkPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
@@ -65,7 +66,7 @@ const Compress = () => {
       const [customNamePattern, setCustomNamePattern] = useState("");
       const [imageMetadata, setImageMetadata] = useState<ImageMetadata[]>([]);
       const [showThumbnails, setShowThumbnails] = useState(true);
-      const [currentImageEffects] = useState<{
+      const [currentImageEffects, setCurrentImageEffects] = useState<{
         rotation: number;
         filter: Filter;
         filterValue: number;
@@ -76,11 +77,14 @@ const Compress = () => {
       });
     
       const handleClosePreview = useCallback(() => {
-        previewImages.forEach(URL.revokeObjectURL);
-        setPreviewImages([]);
-        setProcessedBlobs([]);
         setPreviewOpen(false);
         setCurrentPreviewIndex(0);
+        // Clean up after closing to avoid UI flickering
+        setTimeout(() => {
+          previewImages.forEach(URL.revokeObjectURL);
+          setPreviewImages([]);
+          setProcessedBlobs([]);
+        }, 100);
       }, [previewImages]);
     
       useEffect(() => {
@@ -420,11 +424,15 @@ const Compress = () => {
         });
       };
     
-      const processImages = async () => {
+      const processImages = useCallback(async (isRotation = false) => {
         if (files.length === 0) return;
     
         setIsProcessing(true);
         setProgress(0);
+        
+        // Revoke old objects to prevent memory leaks
+        previewImages.forEach(URL.revokeObjectURL);
+        
         const processed: Blob[] = [];
         const previews: string[] = [];
     
@@ -444,29 +452,61 @@ const Compress = () => {
     
         setProcessedBlobs(processed);
         setPreviewImages(previews);
-        setCurrentPreviewIndex(0);
-        setPreviewOpen(true);
+        if (!isRotation) {
+          setCurrentPreviewIndex(0);
+          setPreviewOpen(true);
+        }
         setIsProcessing(false);
-      };
+      }, [files, compressionLevel, customQuality, customMaxSize, renamePattern, customNamePattern, imageMetadata, enableWatermark, watermarkType, watermarkText, watermarkLogo, watermarkPosition, currentImageEffects, previewImages]);
     
-      const handleDownload = async () => {
-        const zip = new JSZip();
-        const processedFiles = zip.folder("compressed-images");
-    
-        processedBlobs.forEach((blob, index) => {
-          processedFiles?.file(generateFileName(files[index].name, index), blob);
-        });
-    
-        const content = await zip.generateAsync({ type: "blob" });
-        saveAs(content, `compressed-images-${compressionLevel}.zip`);
-        
-        // Clean up preview URLs
-        previewImages.forEach(URL.revokeObjectURL);
-        setPreviewImages([]);
-        setProcessedBlobs([]);
-        setPreviewOpen(false);
-      };
-    
+     const handleDownload = async () => {
+  try {
+    console.log("FILES:", files);
+    console.log("BLOBS:", processedBlobs);
+
+    if (!processedBlobs || processedBlobs.length === 0) {
+      alert("No processed images found. Click Preview first.");
+      return;
+    }
+
+    const zip = new JSZip();
+    const folder = zip.folder("compressed-images");
+
+    if (!folder) {
+      throw new Error("ZIP folder creation failed");
+    }
+
+    processedBlobs.forEach((blob, index) => {
+      if (!blob) {
+        console.error("Skipping null blob at index", index);
+        return;
+      }
+
+      const fileName = generateFileName(files[index]?.name || `image_${index}`, index);
+      console.log("Adding file:", fileName);
+
+      folder.file(fileName, blob);
+    });
+
+    console.log("Generating ZIP...");
+
+    const content = await zip.generateAsync({ type: "blob" });
+
+    console.log("ZIP READY:", content);
+
+    if (!content) {
+      throw new Error("ZIP generation failed");
+    }
+
+    saveAs(content, `compressed-images-${compressionLevel}.zip`);
+
+    console.log("DOWNLOAD TRIGGERED");
+
+  } catch (error) {
+    console.error("DOWNLOAD ERROR:", error);
+    alert("Download failed. Check console.");
+  }
+};
       const dropHandler = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         if (e.dataTransfer.files) {
@@ -476,7 +516,21 @@ const Compress = () => {
     
       const dragOverHandler = useCallback((e: React.DragEvent) => {
         e.preventDefault();
+      }, []); 
+
+      const handleRotate = useCallback(() => {
+        setCurrentImageEffects(prev => {
+          const newRotation = (prev.rotation + 90) % 360;
+          return { ...prev, rotation: newRotation };
+        });
       }, []);
+
+      // Re-process images when effects change if preview is open
+      useEffect(() => {
+        if (previewOpen) {
+          processImages(true);
+        }
+      }, [currentImageEffects.rotation, previewOpen]); // Only track rotation for now to avoid loops
   return (
   <div className="min-h-[calc(100vh-160px)] flex justify-center px-6 lg:pt-40  pt-0">
     <Card className="w-full max-w-3xl">
@@ -717,7 +771,7 @@ const Compress = () => {
                   
                   <Button
                     className="w-full"
-                    onClick={processImages}
+                    onClick={() => processImages()}
                     disabled={
                       isProcessing || 
                       (enableWatermark && 
@@ -733,10 +787,17 @@ const Compress = () => {
           </Card>
     
           <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-            <DialogContent className="max-w-4xl bg-white z-[999]">
-              <DialogHeader>
-                <DialogTitle>Preview Results</DialogTitle>
-              </DialogHeader>
+           <DialogContent
+  className="max-w-4xl bg-white"
+  onPointerDownOutside={(e) => e.preventDefault()}
+  onEscapeKeyDown={(e) => e.preventDefault()}
+>
+            <DialogHeader>
+  <DialogTitle>Preview Results</DialogTitle>
+  <DialogDescription>
+    Preview compressed images before downloading.
+  </DialogDescription>
+</DialogHeader>
               
               <div className="space-y-4">
                 <div className="relative aspect-video bg-black rounded-[15px] overflow-hidden">
@@ -810,22 +871,32 @@ const Compress = () => {
     
               <DialogFooter className="flex justify-between ">
                 <div className="flex items-center space-x-2  ">
-                  <Button  className=" cursor-pointer lg:mt-0 mt-3" variant="outline" onClick={handleClosePreview}>
-                    Cancel
-                  </Button>
-                  <Button
-                   className=" cursor-pointer lg:mt-0 mt-3" 
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setShowThumbnails(!showThumbnails)}
-                    title={showThumbnails ? "Hide thumbnails" : "Show thumbnails"}
-                  >
-                    <RotateCw className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Button  className=" cursor-pointer"  onClick={handleDownload}>
-                  Download All
-                </Button>
+                 <Button 
+  type="button"
+  variant="outline" 
+  onClick={handleClosePreview}
+>
+  Cancel
+</Button>
+
+{/* <Button
+  type="button"
+  variant="outline"
+  size="icon"
+  onClick={handleRotate}
+  title="Rotate Image"
+>
+  <RotateCw className="h-4 w-4" />
+</Button> */}
+
+      </div>
+                <Button
+  type="button"
+  onClick={handleDownload}
+>
+  Download All
+</Button>
+           
               </DialogFooter>
             </DialogContent>
           </Dialog>

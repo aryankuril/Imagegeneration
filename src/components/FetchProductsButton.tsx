@@ -35,13 +35,10 @@ export default function FetchProductsButton({
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch products: ${response.statusText}`);
-      }
-
       const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || `Failed to fetch products: ${response.statusText}`);
       }
 
       if (data.products.length === 0) {

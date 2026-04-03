@@ -9,15 +9,13 @@ import TaxiMobile from "./TaxiMobile";
 type NavItem = { label: string; href?: string };
 
 const NAV_ITEMS: NavItem[] = [
-  // { label: "Home", href: "/" },
+  { label: "Home", href: "/" },
   { label: "Pix", href: "/pix" },
   { label: "Compress", href: "/compress" },
   { label: "Effects", href: "/effects" },
   { label: "Resize", href: "/resize" },
   { label: "PDF to Image", href: "/pdf-to-image" },
-  { label: "Metadata", href: "/metadata" },
   { label: "Cost Estimator", href: "https://bombayblokes.com/estimates-calculator" },
-  // { href: "/estimates-calculator", label: "COST ESTIMATOR" },
 ];
 
 const BOTTOM_BAR_H = 68;

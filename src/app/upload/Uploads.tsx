@@ -180,12 +180,14 @@ export default function Upload() {
       for (const folder of uploadedFolders) {
         const normalizedFolderName = normalizeFolderName(folder.folderName);
 
-        const mapping = folderMappings.find(
+        // Use 'data' instead of 'folderMappings' to avoid stale state
+        const mapping = data.find(
           (m) => normalizeFolderName(m.folderName) === normalizedFolderName
         );
 
-        if (!mapping) {
-          console.warn(`No product ID found for folder: ${folder.folderName}`);
+        if (!mapping || mapping.productId === "Not Found") {
+          console.warn(`No product ID found for folder: ${folder.folderName}. Please ensure the folder name matches your Shopify product title.`);
+          setError(`Product not found for folder: ${folder.folderName}. Rename it to match the product title in Shopify.`);
           continue;
         }
 

@@ -12,20 +12,20 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Pix - Bulk Image Processing & Shopify Upload Tool",
-  description: "Effortlessly process and upload product images to Shopify. Features include bulk compression, effects, resizing, PDF to image conversion, and metadata editing.",
+  title: "Free Online Tools | Bombay Blokes",
+  description: "Explore powerful online tools to compress, resize, edit, and optimize images effortlessly. Fast, simple, and built to streamline your workflow with smart digital utilities.",
   keywords: "image processing, shopify upload, bulk image compression, image effects, image resizing, pdf to image, metadata editor",
   authors: [{ name: "Pix" }],
   openGraph: {
-    title: "Pix - Bulk Image Processing & Shopify Upload Tool",
-    description: "Effortlessly process and upload product images to Shopify. Features include bulk compression, effects, resizing, and more.",
+    title: "Free Online Tools | Bombay Blokes",
+    description: "Explore powerful online tools to compress, resize, edit, and optimize images effortlessly. Fast, simple, and built to streamline your workflow with smart digital utilities.",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pix - Bulk Image Processing & Shopify Upload Tool",
-    description: "Effortlessly process and upload product images to Shopify. Features include bulk compression, effects, resizing, and more.",
+    title: "Free Online Tools | Bombay Blokes",
+    description: "Explore powerful online tools to compress, resize, edit, and optimize images effortlessly. Fast, simple, and built to streamline your workflow with smart digital utilities.",
   },
 };
 

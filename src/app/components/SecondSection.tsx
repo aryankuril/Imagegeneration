@@ -24,7 +24,7 @@ const cardsData: CardData[] = [
     buttonText: "Try Now",
     href: "/pix",
       icon:   (
-        <svg id="fi_4400290" enable-background="new 0 0 512 512" 
+        <svg id="fi_4400290" enableBackground="new 0 0 512 512" 
         height="50" 
         viewBox="0 0 512 512" 
         width="50" 
@@ -93,21 +93,22 @@ const cardsData: CardData[] = [
   />
 ),
   },
-  {
-    title: "Metadata Editor",
-    description: "View and strip EXIF metadata from your images with fine-grained control.",
-    image: "/images/calculator/Web-Development.png",
-     buttonText: "Try Now",
-     href: "/metadata",
-      icon: (
-  <img
-    src="/images/metadata.svg"
-    alt="Image Effects"
-    width={60}
-    height={60}
-  />
-),
-  },
+  
+//   {
+//     title: "Metadata Editor",
+//     description: "View and strip EXIF metadata from your images with fine-grained control.",
+//     image: "/images/calculator/Web-Development.png",
+//      buttonText: "Try Now",
+//      href: "/metadata",
+//       icon: (
+//   <img
+//     src="/images/metadata.svg"
+//     alt="Image Effects"
+//     width={60}
+//     height={60}
+//   />
+// ),
+//   },
     {
     title: "Ready Components",
     description: "Production ready React, Next.js, Tailwind components to copy, customize, ship faster.",

@@ -29,10 +29,10 @@ export const NAV_LINKS = [
     href: "/pdf-to-image",
     label: "PDF to Image",
   },
-  {
-    href: "/metadata",
-    label: "Metadata",
-  },
+  // {
+  //   href: "/metadata",
+  //   label: "Metadata",
+  // },
 ];
 
 export default function DesktopNav() {
