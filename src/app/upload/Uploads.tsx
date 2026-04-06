@@ -435,7 +435,8 @@ export default function Upload() {
                 status &&
                 status.includes("successful") && (
                   <>
-                    <h1>Create all folders on your device</h1>
+               
+                    <h5>Create all folders on your device</h5>
                     <FetchProductsButton
                       apiKey={apiKey}
                       storeLink={shopifyURL}
