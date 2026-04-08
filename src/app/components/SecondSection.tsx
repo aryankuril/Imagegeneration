@@ -17,6 +17,20 @@ type CardData = {
 
 
 const cardsData: CardData[] = [
+   {
+    title: "Expense Tracker",
+    description: "Simple expense tracker to manage spending, track finances, and gain insights.",    image: "/images/calculator/Web-Development.png",
+    buttonText: "Try Now",
+    href: "https://expenses.bombayblokes.com",
+    icon: (
+  <img
+    src="/images/expense2.svg"
+    alt="Image Effects"
+    width={60}
+    height={60}
+  />
+),
+  },
   {
     title: "Pix",
    description: "Bulk upload and match product images to Shopify SKUs.",
@@ -32,6 +46,21 @@ const cardsData: CardData[] = [
         <path fill="#fab31e" d="m272 286.54v155.147c0 8.837-7.164 16-16 16s-16-7.163-16-16v-155.148l-42.821 42.822c-3.124 3.124-7.219 4.687-11.313 4.687s-8.189-1.563-11.313-4.687c-6.249-6.248-6.249-16.379 0-22.627l70.134-70.135c3-3.001 7.07-4.687 11.313-4.687s8.313 1.686 11.313 4.687l70.135 70.135c6.249 6.248 6.249 16.379 0 22.627-6.248 6.248-16.379 6.248-22.627 0zm214.787-64.698c-14.159-17.422-33.274-30.291-54.495-36.835-16.958-38.146-55.033-63.218-97.315-63.218-2.763 0-5.531.108-8.292.323-10.683-18.487-25.597-34.229-43.637-45.958-21.977-14.288-47.504-21.841-73.821-21.841-73.821 0-134.055 59.294-135.587 132.755-19.317 7.19-36.55 19.685-49.422 36.017-15.617 19.815-24.218 44.531-24.218 69.593 0 62.095 50.518 112.613 112.613 112.613h71.577c8.836 0 16-7.163 16-16s-7.164-16-16-16h-71.577c-44.45 0-80.613-36.163-80.613-80.613 0-36.715 25.954-69.667 61.713-78.353 7.6-1.846 12.752-8.916 12.181-16.716-.188-2.57-.284-5.153-.284-7.68 0-57.134 46.482-103.616 103.617-103.616 40.115 0 76.998 23.51 93.961 59.895 3.103 6.653 10.335 10.337 17.542 8.947 4.683-.906 9.477-1.366 14.248-1.366 31.624 0 59.883 20.046 70.319 49.881 1.824 5.217 6.212 9.123 11.605 10.331 36.562 8.19 63.098 41.278 63.098 78.677 0 44.45-36.163 80.613-80.613 80.613h-71.577c-8.836 0-16 7.163-16 16s7.164 16 16 16h71.577c62.095 0 112.613-50.519 112.613-112.613 0-25.673-8.954-50.829-25.213-70.836z"></path></svg>
 
     ),
+  },
+    {
+    title: "PDF to Image",
+    description: "Convert PDF files to high-quality images with customizable settings.",
+    image: "/images/calculator/Web-Development.png",
+     buttonText: "Try Now",
+     href: "/pdf-to-image",
+     icon: (
+  <img
+    src="/images/transfer-data.svg"
+    alt="Image Effects"
+    width={80}
+    height={80}
+  />
+),
   },
   {
     title: "Image Compression",
@@ -78,21 +107,7 @@ const cardsData: CardData[] = [
   />
 ),
   },
-  {
-    title: "PDF to Image",
-    description: "Convert PDF files to high-quality images with customizable settings.",
-    image: "/images/calculator/Web-Development.png",
-     buttonText: "Try Now",
-     href: "/pdf-to-image",
-     icon: (
-  <img
-    src="/images/transfer-data.svg"
-    alt="Image Effects"
-    width={80}
-    height={80}
-  />
-),
-  },
+
   
 //   {
 //     title: "Metadata Editor",
@@ -109,49 +124,8 @@ const cardsData: CardData[] = [
 //   />
 // ),
 //   },
-    {
-    title: "Ready Components",
-    description: "Production ready React, Next.js, Tailwind components to copy, customize, ship faster.",
-    image: "/images/calculator/Web-Development.png",
-    buttonText: "Try Now",
-    href: "https://readycomponents.bombayblokes.com",
-      icon: (
-  <img
-    src="/images/readycomponent.svg"
-    alt="Image Effects"
-    width={60}
-    height={60}
-  />
-),
-  },
-    {
-    title: "Figma Components",
-    description: "Ready to use Figma components and design systems for faster design.",    image: "/images/calculator/Web-Development.png",
-    buttonText: "Try Now",
-    href: "https://www.figma.com/@bombayblokes",
-    icon: (
-  <img
-    src="/images/figmacomponent2.svg"
-    alt="Image Effects"
-    width={60}
-    height={60}
-  />
-),
-  },
-    {
-    title: "Expense Tracker",
-    description: "Simple expense tracker to manage spending, track finances, and gain insights.",    image: "/images/calculator/Web-Development.png",
-    buttonText: "Try Now",
-    href: "https://expenses.bombayblokes.com",
-    icon: (
-  <img
-    src="/images/expense2.svg"
-    alt="Image Effects"
-    width={60}
-    height={60}
-  />
-),
-  },
+
+   
 ];
 
 const SecondSection = () => {
