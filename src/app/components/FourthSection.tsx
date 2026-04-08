@@ -76,8 +76,9 @@ const FourthSection = () => {
               <div className="p-6 flex flex-col justify-between h-auto">
                 <div>
                   <h3 className="font-semibold mb-3">{card.title}</h3>
-                  <p className="black-text body2">{card.description}</p>
-
+                 <p className="black-text body2 max-w-lg">
+  {card.description}
+</p>
                   
                 </div>
 
