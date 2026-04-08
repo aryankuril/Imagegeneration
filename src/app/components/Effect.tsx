@@ -6,10 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageEffects, Filter } from "@/components/ui/image-effects";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function Effects() {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+const [previewImages, setPreviewImages] = useState<string[]>([]);
+const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+const [showThumbnails] = useState(true);
   const [currentEffects, setCurrentEffects] = useState<{
     rotation: number;
     filter: Filter;
@@ -41,7 +48,7 @@ export default function Effects() {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const img = new Image();
+        const img = new window.Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d")!;
@@ -107,26 +114,47 @@ export default function Effects() {
   };
 
   const processImages = async () => {
-    if (files.length === 0) return;
+  if (files.length === 0) return;
 
-    setIsProcessing(true);
-    const zip = new JSZip();
-    const folder = zip.folder("effects-applied");
+  setIsProcessing(true);
+  const previews: string[] = [];
 
-    try {
-      for (const file of files) {
-        const processedBlob = await applyEffects(file);
-        folder?.file(file.name, processedBlob);
-      }
-
-      const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, "effects-applied.zip");
-    } catch (error) {
-      console.error("Error processing images:", error);
-    } finally {
-      setIsProcessing(false);
+  try {
+    for (const file of files) {
+      const processedBlob = await applyEffects(file);
+      const url = URL.createObjectURL(processedBlob);
+      previews.push(url);
     }
-  };
+
+    setPreviewImages(previews);
+    setPreviewOpen(true); // 👈 OPEN POPUP HERE
+  } catch (error) {
+    console.error("Error processing images:", error);
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+
+const handleDownload = async () => {
+  const zip = new JSZip();
+  const folder = zip.folder("effects-applied");
+
+  for (let i = 0; i < files.length; i++) {
+    const blob = await applyEffects(files[i]);
+    folder?.file(files[i].name, blob);
+  }
+
+  const content = await zip.generateAsync({ type: "blob" });
+  saveAs(content, "effects-applied.zip");
+
+  setPreviewOpen(false);
+};
+
+
+const handleClosePreview = () => {
+  setPreviewOpen(false);
+};
 
   return (
    <div className="min-h-[calc(100vh-160px)] flex justify-center px-6 lg:pt-40  pt-0">
@@ -192,6 +220,121 @@ export default function Effects() {
             </div>
           )}
         </CardContent>
+
+         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+           <DialogContent
+  className="max-w-4xl bg-white"
+  onPointerDownOutside={(e) => e.preventDefault()}
+  onEscapeKeyDown={(e) => e.preventDefault()} 
+>
+            <DialogHeader>
+  <DialogTitle>Preview Results</DialogTitle>
+  <DialogDescription>
+    Preview image before downloading.
+  </DialogDescription>
+</DialogHeader>
+              
+              <div className="space-y-4">
+                <div className="relative aspect-video bg-black rounded-[15px] overflow-hidden">
+                  {previewImages.length > 0 && (
+                    <Image
+                      src={previewImages[currentPreviewIndex]}
+                      alt={`Preview ${currentPreviewIndex + 1}`}
+                      fill
+                      className="object-contain"
+                      unoptimized
+                    />
+                  )}
+                  
+                  {previewImages.length > 1 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute left-2 top-1/2 -translate-y-1/2"
+                        onClick={() => setCurrentPreviewIndex((prev) => 
+                          prev > 0 ? prev - 1 : previewImages.length - 1
+                        )}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2"
+                        onClick={() => setCurrentPreviewIndex((prev) => 
+                          prev < previewImages.length - 1 ? prev + 1 : 0
+                        )}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+    
+                {showThumbnails && previewImages.length > 1 && (
+                  <div className="flex space-x-2 overflow-x-auto pb-2">
+                    {previewImages.map((preview, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentPreviewIndex(index)}
+                        className={`relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden ${
+                          index === currentPreviewIndex ? "ring-2 ring-primary" : ""
+                        }`}
+                      >
+                        <Image
+                          src={preview}
+                          alt={`Thumbnail ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+    
+                <div className="text-center text-sm text-muted-foreground">
+                  {previewImages.length > 1 && (
+                    <p>Image {currentPreviewIndex + 1} of {Math.min(files.length, 5)}</p>
+                  )}
+                  {files.length > 5 && (
+                    <p className="mt-1">Showing first 5 images of {files.length} total</p>
+                  )}
+                </div>
+              </div>
+    
+              <DialogFooter className="flex justify-between ">
+                <div className="flex items-center space-x-2  ">
+                 <Button 
+  type="button"
+  variant="outline" 
+  onClick={handleClosePreview}
+>
+  Cancel
+</Button>
+
+{/* <Button
+  type="button"
+  variant="outline"
+  size="icon"
+  onClick={handleRotate}
+  title="Rotate Image"
+>
+  <RotateCw className="h-4 w-4" />
+</Button> */}
+
+      </div>
+                <Button
+  type="button"
+  onClick={handleDownload}
+>
+  Download 
+</Button>
+           
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
       </Card>
     </div>
   );

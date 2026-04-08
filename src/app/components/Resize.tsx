@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface ResizeOptions {
   width: number;
@@ -17,6 +20,10 @@ interface ResizeOptions {
 
 export default function Resize() {
   const [files, setFiles] = useState<File[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+const [previewImages, setPreviewImages] = useState<string[]>([]);
+const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+const [showThumbnails] = useState(true);
   const [resizeOptions, setResizeOptions] = useState<ResizeOptions>({
     width: 800,
     height: 600,
@@ -45,7 +52,7 @@ export default function Resize() {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const img = new Image();
+const img = new window.Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d")!;
@@ -82,27 +89,47 @@ export default function Resize() {
     });
   };
 
-  const processImages = async () => {
-    if (files.length === 0) return;
+ const processImages = async () => {
+  if (files.length === 0) return;
 
-    setIsProcessing(true);
-    const zip = new JSZip();
-    const folder = zip.folder("resized-images");
+  setIsProcessing(true);
+  const previews: string[] = [];
 
-    try {
-      for (const file of files) {
-        const resizedBlob = await resizeImage(file);
-        folder?.file(file.name, resizedBlob);
-      }
-
-      const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, "resized-images.zip");
-    } catch (error) {
-      console.error("Error processing images:", error);
-    } finally {
-      setIsProcessing(false);
+  try {
+    for (const file of files) {
+      const resizedBlob = await resizeImage(file);
+      const url = URL.createObjectURL(resizedBlob);
+      previews.push(url);
     }
-  };
+
+    setPreviewImages(previews);
+    setPreviewOpen(true); // 👈 OPEN POPUP
+  } catch (error) {
+    console.error("Error processing images:", error);
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+
+const handleDownload = async () => {
+  const zip = new JSZip();
+  const folder = zip.folder("resized-images");
+
+  for (let i = 0; i < files.length; i++) {
+    const blob = await resizeImage(files[i]);
+    folder?.file(files[i].name, blob);
+  }
+
+  const content = await zip.generateAsync({ type: "blob" });
+  saveAs(content, "resized-images.zip");
+
+  setPreviewOpen(false);
+};
+
+const handleClosePreview = () => {
+  setPreviewOpen(false);
+};
 
   return (
     <div className="min-h-[calc(100vh-160px)] flex justify-center px-6 lg:pt-40  pt-0">
@@ -199,6 +226,68 @@ export default function Resize() {
             </div>
           )}
         </CardContent>
+
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+  <DialogContent className="max-w-4xl bg-white">
+    <DialogHeader>
+      <DialogTitle>Preview Results</DialogTitle>
+      <DialogDescription>
+        Preview resized images before downloading.
+      </DialogDescription>
+    </DialogHeader>
+
+    <div className="space-y-4">
+      <div className="relative aspect-video bg-black rounded-[15px] overflow-hidden">
+        {previewImages.length > 0 && (
+          <img
+            src={previewImages[currentPreviewIndex]}
+            className="object-contain w-full h-full"
+          />
+        )}
+
+        {previewImages.length > 1 && (
+          <>
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute left-2 top-1/2 -translate-y-1/2"
+              onClick={() =>
+                setCurrentPreviewIndex((prev) =>
+                  prev > 0 ? prev - 1 : previewImages.length - 1
+                )
+              }
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute right-2 top-1/2 -translate-y-1/2"
+              onClick={() =>
+                setCurrentPreviewIndex((prev) =>
+                  prev < previewImages.length - 1 ? prev + 1 : 0
+                )
+              }
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+      </div>
+
+      <DialogFooter className="flex justify-between">
+        <Button variant="outline" onClick={handleClosePreview}>
+          Cancel
+        </Button>
+
+        <Button onClick={handleDownload}>
+          Download All
+        </Button>
+      </DialogFooter>
+    </div>
+  </DialogContent>
+</Dialog>
       </Card>
     </div>
   );

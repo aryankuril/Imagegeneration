@@ -790,7 +790,7 @@ const Compress = () => {
            <DialogContent
   className="max-w-4xl bg-white"
   onPointerDownOutside={(e) => e.preventDefault()}
-  onEscapeKeyDown={(e) => e.preventDefault()}
+  onEscapeKeyDown={(e) => e.preventDefault()} 
 >
             <DialogHeader>
   <DialogTitle>Preview Results</DialogTitle>
@@ -806,7 +806,7 @@ const Compress = () => {
                       src={previewImages[currentPreviewIndex]}
                       alt={`Preview ${currentPreviewIndex + 1}`}
                       fill
-                      className="object-cover"
+                      className="object-contain"
                       unoptimized
                     />
                   )}
