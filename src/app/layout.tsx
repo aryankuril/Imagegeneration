@@ -12,20 +12,42 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Free Online Tools | Bombay Blokes",
-  description: "Explore powerful online tools to compress, resize, edit, and optimize images effortlessly. Fast, simple, and built to streamline your workflow with smart digital utilities.",
-  keywords: "image processing, shopify upload, bulk image compression, image effects, image resizing, pdf to image, metadata editor",
-  authors: [{ name: "Pix" }],
+  title: "AI Image Generator from Google Sheets | Bombay Blokes",
+  description:
+    "Generate high-quality AI images in bulk using Google Sheets. Automate your image creation workflow in minutes. Perfect for marketers, creators, and agencies.",
+    
+  keywords: [
+    "AI image generator",
+    "bulk image generator",
+    "generate images from Google Sheets",
+    "image automation tool",
+    "AI tools for marketing",
+    "bulk content creation",
+    "Bombay Blokes"
+  ],
+
+  authors: [{ name: "Bombay Blokes" }],
+
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
+
   openGraph: {
-    title: "Free Online Tools | Bombay Blokes",
-    description: "Explore powerful online tools to compress, resize, edit, and optimize images effortlessly. Fast, simple, and built to streamline your workflow with smart digital utilities.",
+    title: "AI Image Generator from Google Sheets",
+    description:
+      "Create bulk AI images instantly using Google Sheets. Fast, automated, and powerful.",
     type: "website",
     locale: "en_US",
+    siteName: "Bombay Blokes",
   },
+
   twitter: {
     card: "summary_large_image",
-    title: "Free Online Tools | Bombay Blokes",
-    description: "Explore powerful online tools to compress, resize, edit, and optimize images effortlessly. Fast, simple, and built to streamline your workflow with smart digital utilities.",
+    title: "AI Image Generator | Bombay Blokes",
+    description:
+      "Turn Google Sheets into AI-generated images in minutes. Built for speed and scale.",
   },
 };
 

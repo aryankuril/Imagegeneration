@@ -8,10 +8,11 @@ import Taxi from './components/Taxi'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: "Free Online Tools | Bombay Blokes",
+  title: "AI Image Generator from Google Sheets | Bombay Blokes",
   description:
-    "Explore powerful online tools to compress, resize, edit, and optimize images effortlessly. Fast, simple, and built to streamline your workflow with smart digital utilities.",
+    "Generate high-quality AI images instantly using Google Sheets. Paste your sheet link and create bulk images in minutes. Fast, automated, and built for creators, marketers, and agencies.",
 };
+
 const Index = () => {
   return (
     <div>

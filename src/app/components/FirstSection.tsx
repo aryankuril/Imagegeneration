@@ -9,45 +9,45 @@ const FirstSection = () => {
   const [showPopup, setShowPopup] = useState(false);
 
   const handleSubmit = async () => {
-    if (!sheetUrl) {
-      alert("Enter Google Sheet URL");
-      return;
-    }
+  if (!sheetUrl) {
+    alert("Enter Google Sheet URL");
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const res = await fetch(
-        "https://imggeneration.app.n8n.cloud/webhook-test/generate-images",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            sheet_url: sheetUrl,
-          }),
-        }
-      );
+  try {
+    const res = await fetch(
+      process.env.NEXT_PUBLIC_API_URL as string,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sheet_url: sheetUrl,
+        }),
+      }
+    );
 
-      await res.text();
+    await res.text();
 
-      // ✅ SHOW POPUP
-      setShowPopup(true);
+    // ✅ SHOW POPUP
+    setShowPopup(true);
 
-      // ✅ REDIRECT AFTER 3 SECONDS
-      setTimeout(() => {
-        window.location.href =
-          "https://drive.google.com/drive/folders/1eCb6F4vH67GnjSN0C7DnXQUOXPrfIPYO";
-      }, 3000);
+    // ✅ REDIRECT AFTER 3 SECONDS
+    setTimeout(() => {
+      window.location.href =
+        process.env.NEXT_PUBLIC_REDIRECT_URL as string;
+    }, 3000);
 
-    } catch (err) {
-      console.error(err);
-      alert("Error connecting to n8n");
-    }
+  } catch (err) {
+    console.error(err);
+    alert("Error connecting to n8n");
+  }
 
-    setLoading(false);
-  };
+  setLoading(false);
+};
 
   return (
     <div className="p-5 min-h-screen text-white flex items-center justify-center relative">
