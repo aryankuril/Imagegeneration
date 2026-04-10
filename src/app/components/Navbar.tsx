@@ -7,13 +7,10 @@ const Navbar = () => {
   return (
 
 <div>
-  <div className="hidden md:block">
+
     <Header /> {/* contains DesktopNav */}
-  </div>
-  <div className="block md:hidden">
-   <TaxiMobile />
-    <MobileNav />
-  </div>
+
+  
 </div>
 
   )

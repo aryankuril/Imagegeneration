@@ -2,93 +2,34 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import Button from "./Button";
-export const NAV_LINKS = [
-  {
-    href: "/",
-    label: "Home",
-  },
-   {
-    href: "/pix",
-    label: "Pix",
-  },
-  {
-    href: "/compress",
-    label: "Compress",
-  },
-  {
-    href: "/effects",
-    label: "Effects",
-  },
-  {
-    href: "/resize",
-    label: "Resize",
-  },
-  {
-    href: "/pdf-to-image",
-    label: "PDF to Image",
-  },
-  // {
-  //   href: "/metadata",
-  //   label: "Metadata",
-  // },
-];
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
 
 export default function DesktopNav() {
-  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="w-full flex justify-center py-5 px-6 relative z-[50]">
+    <header className="w-full container flex justify-center py-5 px-4 relative z-50">
+      
       {/* NAV CONTAINER */}
-      <div 
-       className="h-[90px] container flex items-center  bg-[rgba(142,142,142,0.20)] rounded-[20px] backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.1)] items-center absolute inset-x-0 z-[50]">
-
+      {/* <div className="w-full flex items-center justify-between h-[80px] bg-[rgba(142,142,142,0.20)] rounded-2xl backdrop-blur-md shadow px-4 md:px-6"> */}
+        
+        <div className="w-full flex items-center justify-between h-[80px] bg-[rgba(142,142,142,0.20)] rounded-[20px] backdrop-blur-md shadow  px-4 md:px-6">
         {/* LEFT — LOGO */}
         <Link href="/" className="flex items-center">
           <Image
             src="/images/bblogo.webp"
             alt="Logo"
-            width={250}
-            height={80}
-            className="object-contain px-6"
+            width={180}
+            height={60}
+            className="object-contain"
             priority
           />
         </Link>
 
-        {/* CENTER — LINKS */}
-        <nav className="flex-1 flex justify-center">
-          <ul className="flex items-center gap-8 font-medium text-[18px] text-black">
-
-            {NAV_LINKS.map((link) => {
-
-              // ✅ Proper active route detection
-              const active =
-                pathname === link.href ||
-                (link.href !== "/" &&
-                  pathname.startsWith(link.href));
-
-              return (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className={`transition-all duration-200 ${
-                      active
-                        ? "font-semibold underline underline-offset-4"
-                        : "hover:opacity-70"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              );
-            })}
-
-          </ul>
-        </nav>
-
-        {/* RIGHT — BUTTON */}
-        <div className="flex items-center">
+        {/* DESKTOP RIGHT */}
+        <div className="hidden md:flex items-center">
           <Button
             href="https://bombayblokes.com/contactus"
             text="Start Growing"
@@ -96,7 +37,37 @@ export default function DesktopNav() {
           />
         </div>
 
+        {/* MOBILE MENU BUTTON */}
+        <div className="md:hidden">
+          <button onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? (
+              <X className="w-7 h-7 text-black" />
+            ) : (
+              <Menu className="w-7 h-7 text-black" />
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* MOBILE MENU */}
+      {menuOpen && (
+        <div className="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center gap-6 text-lg font-medium">
+          
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="absolute top-6 right-6 text-2xl"
+          >
+            ✕
+          </button>
+
+          <Button
+            href="https://bombayblokes.com/contactus"
+            text="Start Growing"
+            className="text-black"
+            onClick={() => setMenuOpen(false)}
+          />
+        </div>
+      )}
     </header>
   );
 }

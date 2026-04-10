@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import Button from "./Button";
 
 const ThirdSection = () => {
   return (
@@ -87,6 +88,9 @@ const ThirdSection = () => {
         <div className="absolute right-0 top-0 h-full w-3 sm:w-5 md:w-5  candy-border"></div>
 
       </div>
+
+
+    
     </section>
   );
 };

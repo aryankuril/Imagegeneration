@@ -1,8 +1,6 @@
 import React from 'react'
 import Navbar from './components/Navbar'
 import FirstSection from './components/FirstSection'
-import SecondSection from './components/SecondSection'
-import FourthSection from './components/FourthSection'
 import ThirdSection from './components/ThirdSection'
 import Footer from './components/Footer'
 import SmoothScroll from './components/SmoothScroll'
@@ -18,11 +16,8 @@ const Index = () => {
   return (
     <div>
       <SmoothScroll>
-      <Taxi/> 
       <Navbar />
       <FirstSection />
-      <SecondSection />
-      <FourthSection />
       <ThirdSection />
       <Footer />
       </SmoothScroll>
