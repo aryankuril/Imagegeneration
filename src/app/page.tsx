@@ -1,6 +1,7 @@
 import React from 'react'
 import Navbar from './components/Navbar'
 import FirstSection from './components/FirstSection'
+import Chat from './components/Chat'
 import ThirdSection from './components/ThirdSection'
 import Footer from './components/Footer'
 import SmoothScroll from './components/SmoothScroll'
@@ -19,6 +20,7 @@ const Index = () => {
       <SmoothScroll>
       <Navbar />
       <FirstSection />
+      <Chat />
       <ThirdSection />
       <Footer />
       </SmoothScroll>

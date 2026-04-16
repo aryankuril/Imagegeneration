@@ -18,7 +18,7 @@ const FirstSection = () => {
 
   try {
     const res = await fetch(
-      process.env.NEXT_PUBLIC_API_URL as string,
+      process.env.NEXT_PUBLIC_SHEET_API_URL as string,
       {
         method: "POST",
         headers: {
@@ -83,7 +83,7 @@ const FirstSection = () => {
   
 
       {/* ✅ POPUP */}
-      {showPopup && (
+    {showPopup && (
          <div className=" p-5 fixed inset-0 bg-black/60 flex items-center justify-center z-[200]">
           <div className="bg-[#1D1D1D] rounded-[20px] relative overflow-hidden max-w-lg w-full">
         <div className="relative z-10 py-10 p-7">
