@@ -1,6 +1,7 @@
 import React from 'react'
 import Navbar from './components/Navbar'
 import FirstSection from './components/FirstSection'
+import Bulkgenerator from './components/Bulkgenerator'
 import Chat from './components/Chat'
 import ThirdSection from './components/ThirdSection'
 import Footer from './components/Footer'
@@ -17,13 +18,14 @@ export const metadata: Metadata = {
 const Index = () => {
   return (
     <div>
-      <SmoothScroll>
+
       <Navbar />
       <FirstSection />
+      <Bulkgenerator />
       <Chat />
       <ThirdSection />
       <Footer />
-      </SmoothScroll>
+
     </div>
   )
 }
