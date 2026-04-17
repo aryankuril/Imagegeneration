@@ -29,11 +29,6 @@ export const metadata: Metadata = {
 
   authors: [{ name: "Bombay Blokes" }],
 
-  icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
-  },
 
   openGraph: {
     title: "AI Image Generator from Google Sheets",
@@ -71,6 +66,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${miso.variable} ${poppins.variable}`}>
+      <head>
+        <link rel="icon" href="images/favicon.png" type="image/png" />
+      </head>
       <body className={inter.className}>
         <SmoothScroll>
         {children}

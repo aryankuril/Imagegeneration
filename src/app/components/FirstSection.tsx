@@ -20,11 +20,11 @@ const FirstSection = () => {
   };
   return (
      <div className="w-full min-h-screen flex items-center justify-center px-4 py-10">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-6xl">
+      <div className="container grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-6xl">
 
         {/* BULK IMAGE GENERATOR */}
 
-      <div className="bg-[#1D1D1D] p-6 rounded-[20px] relative overflow-hidden w-full max-w-lg">    
+      <div className="bg-[#1D1D1D] p-6 rounded-[20px] relative overflow-hidden w-full ">    
                
               <h3 className=" font-semibold mb-4 text-highlight">
             Bulk Image Generator
@@ -50,7 +50,7 @@ const FirstSection = () => {
         </div>
 
         {/* IMAGE GENERATOR */}
-      <div className="bg-[#1D1D1D] p-6 rounded-[20px] relative overflow-hidden w-full max-w-lg">  
+      <div className="bg-[#1D1D1D] p-6 rounded-[20px] relative overflow-hidden w-full ">  
                  <h3 className=" font-semibold mb-4 text-highlight">
             Image Generator
           </h3>

@@ -55,9 +55,9 @@ const Bulkgenerator = () => {
       <div className="bg-[#1D1D1D] rounded-[20px] relative overflow-hidden max-w-lg w-full">
         <div className="relative z-10 py-10 p-7">
           
-          <h1 className="text-2xl font-bold mb-6">
+          <h3 className="font-bold mb-6">
             AI Image Generator
-          </h1>
+          </h3>
 
           <input
             type="text"

@@ -81,13 +81,13 @@ export default function Chat() {
           onSubmit={handleSubmit}
           className="p-6 rounded-2xl shadow-lg w-full max-w-lg space-y-4"
         >
-          <h2 className="text-xl font-semibold text-center text-white">
-            Edit Image (Nano Banana)
-          </h2>
+           <h3 className="font-bold mb-6 text-white">
+            Image Generator
+          </h3>
 
           <div>
             <label className="block text-sm font-medium mb-1 text-white">
-              Edit_Description
+              Edit Description
             </label>
             <input
               type="text"
