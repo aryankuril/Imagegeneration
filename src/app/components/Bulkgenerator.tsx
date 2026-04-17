@@ -38,7 +38,7 @@ const Bulkgenerator = () => {
     // ✅ REDIRECT AFTER 3 SECONDS
     setTimeout(() => {
       window.location.href =
-        process.env.NEXT_PUBLIC_REDIRECT_URL as string;
+        process.env.NEXT_PUBLIC_REDIRECT_DRIVE_URL as string;
     }, 3000);
 
   } catch (err) {
