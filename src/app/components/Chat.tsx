@@ -3,7 +3,47 @@
 import { useState } from "react";
 import Button from "./Button";
 import { Download } from "lucide-react";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 
+type GeneratedImageResponse =
+  | { image?: string; images?: string[] }
+  | Array<{ image?: string }>;
+
+const getImageSrc = (image: string) =>
+  image.startsWith("http") || image.startsWith("data:")
+    ? image
+    : `data:image/png;base64,${image}`;
+
+const imageStringToBlob = async (image: string) => {
+  const imageSrc = getImageSrc(image);
+  const response = await fetch(imageSrc);
+
+  if (!response.ok) {
+    throw new Error("Failed to prepare generated image for upload");
+  }
+
+  return response.blob();
+};
+
+const extractGeneratedImages = (data: GeneratedImageResponse) => {
+  if (Array.isArray(data)) {
+    return data
+      .map((item) => item.image)
+      .filter((image): image is string => Boolean(image));
+  }
+
+  if (Array.isArray(data.images)) {
+    return data.images;
+  }
+
+  if (data.image) {
+    return [data.image];
+  }
+
+  return [];
+};
 
 export default function Chat() {
   const [description, setDescription] = useState("");
@@ -14,16 +54,18 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [showPopup, setShowPopup] = useState(false);
-  const [copyMode, setCopyMode] = useState<"none" | "default" | "custom">("none");
-  
-const [customCopy, setCustomCopy] = useState({
-  title: "",
-  description: "",
-  price: "",
-  cta: "",
-});
+  const [copyMode, setCopyMode] = useState<"none" | "default" | "custom">(
+    "none"
+  );
 
-const [showCopyPopup, setShowCopyPopup] = useState(false);
+  const [customCopy, setCustomCopy] = useState({
+    title: "",
+    description: "",
+    price: "",
+    cta: "",
+  });
+
+  const [showCopyPopup, setShowCopyPopup] = useState(false);
 
   const CHAT_API_URL =
     "https://imggenerationn.app.n8n.cloud/webhook-test/c554ca4f-1160-467a-aad4-2a2638f646f2";
@@ -56,12 +98,12 @@ const [showCopyPopup, setShowCopyPopup] = useState(false);
 
       formData.append("copyMode", copyMode);
 
-if (copyMode === "custom") {
-  formData.append("title", customCopy.title);
-  formData.append("descriptionCopy", customCopy.description);
-  formData.append("price", customCopy.price);
-  formData.append("cta", customCopy.cta);
-}
+      if (copyMode === "custom") {
+        formData.append("title", customCopy.title);
+        formData.append("descriptionCopy", customCopy.description);
+        formData.append("price", customCopy.price);
+        formData.append("cta", customCopy.cta);
+      }
 
       const res = await fetch(CHAT_API_URL, {
         method: "POST",
@@ -73,20 +115,50 @@ if (copyMode === "custom") {
         throw new Error("Request failed");
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as GeneratedImageResponse;
 
-console.log(data); // check first
+      console.log(data); // check first
 
       // ✅ SHOW POPUP (same as bulk)
 
-      if (Array.isArray(data)) {
-  const imgs = data.map((item) => item.image);
-  setGeneratedImages((prev) => [...imgs, ...prev]); // 🔥 new first
-} else if (data.images) {
-  setGeneratedImages((prev) => [...data.images, ...prev]); // 🔥 new first
-} else if (data.image) {
-  setGeneratedImages((prev) => [data.image, ...prev]); // 🔥 new first
-}
+      const imgs = extractGeneratedImages(data);
+
+      if (imgs.length > 0) {
+        const batchId =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : String(Date.now());
+
+        const uploadedUrls = await Promise.all(
+          imgs.map(async (img, index) => {
+            const blob = await imageStringToBlob(img);
+            const fileRef = ref(
+              storage,
+              `generated-images/${batchId}/image-${index + 1}.png`
+            );
+
+            await uploadBytes(fileRef, blob, {
+              contentType: blob.type || "image/png",
+            });
+
+            return getDownloadURL(fileRef);
+          })
+        );
+
+        console.log("Uploaded URLs:", uploadedUrls);
+
+        await addDoc(collection(db, "generatedImages"), {
+          imageUrls: uploadedUrls,
+          description,
+          aspectRatio,
+          variation,
+          copyMode,
+          customCopy: copyMode === "custom" ? customCopy : null,
+          createdAt: serverTimestamp(),
+        });
+
+        setGeneratedImages((prev) => [...uploadedUrls, ...prev]); // new first
+      }
       setShowPopup(true);
 
       // ✅ REDIRECT AFTER 3 SECONDS
@@ -106,236 +178,219 @@ console.log(data); // check first
   const decrease = () => setVariation((prev) => Math.max(prev - 1, 1));
 
   return (
-<div className="min-h-screen text-white relative overflow-hidden pb-40">
-
-{generatedImages.length > 0 || loading ? (
-
-  /* 🔥 IMAGE + SKELETON STATE */
-  <div className="container w-full min-h-[60vh] px-6">
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
- {/* 🔥 SKELETON FOR NEW IMAGES */}
-      {loading &&
-        Array.from({ length: variation }).map((_, i) => (
-          <div
-            key={`skeleton-${i}`}
-            className="w-full aspect-square rounded-xl 
+    <div className="min-h-screen text-white relative overflow-hidden pb-40">
+      {generatedImages.length > 0 || loading ? (
+        /* 🔥 IMAGE + SKELETON STATE */
+        <div className="container w-full min-h-[60vh] px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* 🔥 SKELETON FOR NEW IMAGES */}
+            {loading &&
+              Array.from({ length: variation }).map((_, i) => (
+                <div
+                  key={`skeleton-${i}`}
+                  className="w-full aspect-square rounded-xl 
                        bg-gray-200/60 animate-pulse"
-          />
-        ))}
-      {/* 🔥 EXISTING IMAGES */}
-      {generatedImages.map((img, i) => (
-        <div key={i} className="relative group">
+                />
+              ))}
+            {/* 🔥 EXISTING IMAGES */}
+            {generatedImages.map((img, i) => (
+              <div key={i} className="relative group">
+                <img
+                  src={getImageSrc(img)}
+                  className="w-full h-auto object-cover rounded-xl"
+                />
 
-          <img
-            src={`data:image/png;base64,${img}`}
-            className="w-full h-auto object-cover rounded-xl"
-          />
-
-          {/* DOWNLOAD ICON */}
-          <a
-            href={`data:image/png;base64,${img}`}
-            download={`image-${i}.png`}
-            className="absolute top-3 right-3 
+                {/* DOWNLOAD ICON */}
+                <a
+                  href={getImageSrc(img)}
+                  download={`image-${i}.png`}
+                  className="absolute top-3 right-3 
                        opacity-0 group-hover:opacity-100 
                        transition duration-300"
-          >
-            <div className="w-10 h-10 flex items-center justify-center 
+                >
+                  <div
+                    className="w-10 h-10 flex items-center justify-center 
                             rounded-full 
                             bg-black/50 backdrop-blur-md 
                             border border-white/20 
                             hover:bg-[#fab31e] hover:text-black 
-                            transition shadow-lg">
+                            transition shadow-lg"
+                  >
+                    <Download size={18} />
+                  </div>
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        /* 🔥 HERO DEFAULT */
+        <div className="w-full min-h-[60vh] flex flex-col items-center justify-center text-center relative z-10">
+          <div className="flex items-center justify-center gap-4 mb-6 relative">
+            <img
+              src="/images/brandimg1.png"
+              className="w-28 h-28 object-cover rounded-xl rotate-[-10deg] opacity-80 border border-white/10"
+            />
+            <img
+              src="/images/brandimg2.png"
+              className="w-28 h-28 object-cover rounded-xl z-10 border border-white/20"
+            />
+            <img
+              src="/images/brandimg3.png"
+              className="w-28 h-28 object-cover rounded-xl rotate-[10deg] opacity-80 border border-white/10"
+            />
+          </div>
 
-              <Download size={18} />
+          <h1 className="text-4xl md:text-6xl font-bold leading-tight text-black">
+            START CREATING WITH <br />
+            <span className="text-highlight">BOMBAY BLOKES</span>
+          </h1>
 
+          <p className="text-black mt-2 max-w-xl">
+            Describe a scene, character, mood, or style and watch it come to
+            life
+          </p>
+        </div>
+      )}
+
+      {/* 🔥 FLOATING INPUT BAR */}
+      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 w-full max-w-5xl px-4 z-50">
+        <div className="bg-[#1D1D1D]/80 backdrop-blur-xl border border-white/10 rounded-[20px] w-full p-4 flex items-center gap-4 shadow-2xl">
+          {/* 🔹 IMAGE UPLOADS */}
+          <div className="flex gap-4">
+            {/* PRODUCT IMAGE */}
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-gray-400">Product</span>
+
+              <label className="relative w-14 h-14 bg-black/40 rounded-xl flex items-center justify-center cursor-pointer overflow-visible">
+                {productImage ? (
+                  <>
+                    <img
+                      src={URL.createObjectURL(productImage)}
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+
+                    {/* ❌ HALF OUTSIDE BUTTON */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setProductImage(null);
+                      }}
+                      className="absolute -top-1 -right-1 bg-black border border-white/20 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] hover:bg-red-500 z-10"
+                    >
+                      ✕
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-lg text-white">+</span>
+                )}
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) =>
+                    setProductImage(e.target.files ? e.target.files[0] : null)
+                  }
+                  className="hidden"
+                />
+              </label>
             </div>
-          </a>
 
-        </div>
-      ))}
+            {/* REFERENCE IMAGE */}
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-gray-400">Reference</span>
 
-     
+              <label className="relative w-14 h-14 bg-black/40 rounded-xl flex items-center justify-center cursor-pointer overflow-visible">
+                {referenceImage ? (
+                  <>
+                    <img
+                      src={URL.createObjectURL(referenceImage)}
+                      className="w-full h-full object-cover rounded-xl"
+                    />
 
-    </div>
-  </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setReferenceImage(null);
+                      }}
+                      className="absolute -top-1 -right-1 bg-black border border-white/20 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] hover:bg-red-500 z-10"
+                    >
+                      ✕
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-lg text-white">+</span>
+                )}
 
-) : (
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) =>
+                    setReferenceImage(e.target.files ? e.target.files[0] : null)
+                  }
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+          {/* 🔹 INPUT + CONTROLS */}
+          <div className="flex-1">
+            {/* PROMPT */}
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe the scene you imagine"
+              className="w-full bg-transparent outline-none text-sm  text-white mb-3 placeholder-grey-400"
+            />
 
-  /* 🔥 HERO DEFAULT */
-  <div className="w-full min-h-[60vh] flex flex-col items-center justify-center text-center relative z-10">
+            {/* CONTROLS */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* MODEL */}
+              <div className="bg-black/40 px-4 py-2 text-white rounded-xl text-sm flex items-center gap-1">
+                <span className="text-highlight font-bold text-sm">G</span>
+                Nano Banana Pro
+              </div>
 
-    <div className="flex items-center justify-center gap-4 mb-6 relative">
-      <img src="/images/brandimg1.png" className="w-28 h-28 object-cover rounded-xl rotate-[-10deg] opacity-80 border border-white/10" />
-      <img src="/images/brandimg2.png" className="w-28 h-28 object-cover rounded-xl z-10 border border-white/20" />
-      <img src="/images/brandimg3.png" className="w-28 h-28 object-cover rounded-xl rotate-[10deg] opacity-80 border border-white/10" />
-    </div>
+              {/* ASPECT DROPDOWN */}
+              <select
+                value={aspectRatio}
+                onChange={(e) => setAspectRatio(e.target.value)}
+                className="bg-black/40 px-3 py-2 rounded-xl text-white text-sm outline-none"
+              >
+                <option value="auto">Auto</option>
+                <option value="1:1">1:1</option>
+                <option value="3:4">3:4</option>
+                <option value="4:3">4:3</option>
+                <option value="2:3">2:3</option>
+                <option value="3:2">3:2</option>
+                <option value="9:16">9:16</option>
+                <option value="16:9">16:9</option>
+                <option value="5:4">5:4</option>
+                <option value="4:5">4:5</option>
+                <option value="21:9">21:9</option>
+              </select>
 
-    <h1 className="text-4xl md:text-6xl font-bold leading-tight text-black">
-      START CREATING WITH <br />
-      <span className="text-highlight">BOMBAY BLOKES</span>
-    </h1>
+              {/* VARIATIONS */}
+              <div className="bg-black/40 px-4 py-2 text-white rounded-xl text-sm flex items-center gap-3">
+                <button onClick={decrease}>-</button>
+                <span>{variation}</span>
+                <button onClick={increase}>+</button>
+              </div>
 
-    <p className="text-black mt-2 max-w-xl">
-      Describe a scene, character, mood, or style and watch it come to life
-    </p>
+              <button
+                onClick={() => setShowCopyPopup(true)}
+                className="bg-black/40 px-4 py-2 rounded-xl text-sm"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
 
-  </div>
-
-)}
-
-
-
-
-
-  {/* 🔥 FLOATING INPUT BAR */}
-  <div className="fixed bottom-5 left-1/2 -translate-x-1/2 w-full max-w-5xl px-4 z-50">
-
-    <div className="bg-[#1D1D1D]/80 backdrop-blur-xl border border-white/10 rounded-[20px] w-full p-4 flex items-center gap-4 shadow-2xl">
-
-      {/* 🔹 IMAGE UPLOADS */}
-      <div className="flex gap-4">
-
-  {/* PRODUCT IMAGE */}
-  <div className="flex flex-col items-center gap-1">
-    <span className="text-[10px] text-gray-400">Product</span>
-
-    <label className="relative w-14 h-14 bg-black/40 rounded-xl flex items-center justify-center cursor-pointer overflow-visible">
-
-      {productImage ? (
-        <>
-          <img
-            src={URL.createObjectURL(productImage)}
-            className="w-full h-full object-cover rounded-xl"
-          />
-
-          {/* ❌ HALF OUTSIDE BUTTON */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              setProductImage(null);
-            }}
-            className="absolute -top-1 -right-1 bg-black border border-white/20 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] hover:bg-red-500 z-10"
-          >
-            ✕
-          </button>
-        </>
-      ) : (
-        <span className="text-lg text-white">+</span>
-      )}
-
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) =>
-          setProductImage(e.target.files ? e.target.files[0] : null)
-        }
-        className="hidden"
-      />
-    </label>
-  </div>
-
-  {/* REFERENCE IMAGE */}
-  <div className="flex flex-col items-center gap-1">
-    <span className="text-[10px] text-gray-400">Reference</span>
-
-    <label className="relative w-14 h-14 bg-black/40 rounded-xl flex items-center justify-center cursor-pointer overflow-visible">
-
-      {referenceImage ? (
-        <>
-          <img
-            src={URL.createObjectURL(referenceImage)}
-            className="w-full h-full object-cover rounded-xl"
-          />
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              setReferenceImage(null);
-            }}
-            className="absolute -top-1 -right-1 bg-black border border-white/20 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] hover:bg-red-500 z-10"
-          >
-            ✕
-          </button>
-        </>
-      ) : (
-        <span className="text-lg text-white">+</span>
-      )}
-
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) =>
-          setReferenceImage(e.target.files ? e.target.files[0] : null)
-        }
-        className="hidden"
-      />
-    </label>
-  </div>
-
-</div>
-    {/* 🔹 INPUT + CONTROLS */}
-    <div className="flex-1">
-
-      {/* PROMPT */}
-      <input
-        type="text"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Describe the scene you imagine"
-        className="w-full bg-transparent outline-none text-sm  text-white mb-3 placeholder-grey-400"
-      />
-
-      {/* CONTROLS */}
-      <div className="flex items-center gap-3 flex-wrap">
-
-        {/* MODEL */}
-        <div className="bg-black/40 px-4 py-2 text-white rounded-xl text-sm flex items-center gap-1">
-          <span className="text-highlight font-bold text-sm">G</span>
-          Nano Banana Pro
-        </div>
-
-        {/* ASPECT DROPDOWN */}
-        <select
-          value={aspectRatio}
-          onChange={(e) => setAspectRatio(e.target.value)}
-          className="bg-black/40 px-3 py-2 rounded-xl text-white text-sm outline-none"
-        >
-          <option value="auto">Auto</option>
-          <option value="1:1">1:1</option>
-          <option value="3:4">3:4</option>
-          <option value="4:3">4:3</option>
-          <option value="2:3">2:3</option>
-          <option value="3:2">3:2</option>
-          <option value="9:16">9:16</option>
-          <option value="16:9">16:9</option>
-          <option value="5:4">5:4</option>
-          <option value="4:5">4:5</option>
-          <option value="21:9">21:9</option>
-        </select>
- 
-
-        {/* VARIATIONS */}
-        <div className="bg-black/40 px-4 py-2 text-white rounded-xl text-sm flex items-center gap-3">
-          <button onClick={decrease}>-</button>
-          <span>{variation}</span>
-          <button onClick={increase}>+</button>
-        </div>
-
-
-        <button
-  onClick={() => setShowCopyPopup(true)}
-  className="bg-black/40 px-4 py-2 rounded-xl text-sm"
->
-  Copy
-</button>
-
-      </div>
-    </div>
-
-    {/* 🔹 GENERATE BUTTON */}
-    {/* <button
+          {/* 🔹 GENERATE BUTTON */}
+          {/* <button
       onClick={handleSubmit}
       disabled={loading}
       className="bg-lime-400 text-black font-semibold px-6 py-4 rounded-xl hover:opacity-90 transition"
@@ -343,18 +398,18 @@ console.log(data); // check first
       {loading ? "Generating..." : `Generate ✨ ${variation}`}
     </button> */}
 
-    <div className="flex items-center">
-       <Button
-        onClick={() => handleSubmit(new Event("submit") as any)}
-        disabled={loading} 
-        text={loading ? "Generating..." : "Generate Images"} 
-        className="text-white" 
-        /> 
-       </div>
-  </div>
+          <div className="flex items-center">
+            <Button
+              onClick={() => handleSubmit(new Event("submit") as any)}
+              disabled={loading}
+              text={loading ? "Generating..." : "Generate Images"}
+              className="text-white"
+            />
+          </div>
+        </div>
 
-  {/* POPUP SAME */}
-  {/* {showPopup && (
+        {/* POPUP SAME */}
+        {/* {showPopup && (
     <div className="p-5 fixed inset-0 bg-black/60 flex items-center justify-center z-[200]">
       <div className="bg-[#1D1D1D] rounded-[20px] max-w-lg w-full p-7">
         <h3 className="text-xl font-semibold mb-2">
@@ -366,141 +421,141 @@ console.log(data); // check first
       </div>
     </div>
   )} */}
-  </div>
-  {showCopyPopup && (
-  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-    <div className="bg-[#1D1D1D] rounded-[20px] relative overflow-hidden p-6 w-[400px]">
+      </div>
+      {showCopyPopup && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-[#1D1D1D] rounded-[20px] relative overflow-hidden p-6 w-[400px]">
+            <h2 className="text-lg mb-4">Select Copy Mode</h2>
 
-      <h2 className="text-lg mb-4">Select Copy Mode</h2>
-
-<div className="flex flex-col gap-3 mt-2">
-
-  {/* NONE */}
-  <button
-    onClick={() => {
-      setCopyMode("none");
-      setShowCopyPopup(false);
-    }}
-    className={`text-left px-4 py-3 rounded-xl transition 
+            <div className="flex flex-col gap-3 mt-2">
+              {/* NONE */}
+              <button
+                onClick={() => {
+                  setCopyMode("none");
+                  setShowCopyPopup(false);
+                }}
+                className={`text-left px-4 py-3 rounded-xl transition 
       border border-transparent
-      ${copyMode === "none" 
-        ? "bg-white/10 border-[#fab31e] text-white" 
-        : "text-gray-300 hover:bg-white/5 hover:text-white"}
-    `}
-  >
-    Do Not Add Copy
-    <span className="block text-xs text-gray-400">
-      (No Copy)
-    </span>
-  </button>
-
-  {/* DEFAULT */}
-  <button
-    onClick={() => {
-      setCopyMode("default");
-      setShowCopyPopup(false);
-    }}
-    className={`text-left px-4 py-3 rounded-xl transition 
-      border border-transparent
-      ${copyMode === "default" 
-        ? "bg-white/10 border-[#fab31e] text-white" 
-        : "text-gray-300 hover:bg-white/5 hover:text-white"}
-    `}
-  >
-    Default Copy
-    <span className="block text-xs text-gray-400">
-      (From Reference Image)
-    </span>
-  </button>
-
-  {/* CUSTOM */}
-  <button
-    onClick={() => setCopyMode("custom")}
-    className={`text-left px-4 py-3 rounded-xl transition 
-      border border-transparent
-      ${copyMode === "custom" 
-        ? "bg-white/10 border-[#fab31e] text-white" 
-        : "text-gray-300 hover:bg-white/5 hover:text-white"}
-    `}
-  >
-    Custom Copy
-    <span className="block text-xs text-gray-400">
-      Add your own text
-    </span>
-  </button>
-
-</div>
-
-      {/* CUSTOM FORM */}
-     {copyMode === "custom" && (
-  <div className="mt-5 flex flex-col gap-3">
-
-    {/* TITLE */}
-    <input
-      placeholder="Title (required)"
-      value={customCopy.title}
-      onChange={(e) =>
-        setCustomCopy({ ...customCopy, title: e.target.value })
+      ${
+        copyMode === "none"
+          ? "bg-white/10 border-[#fab31e] text-white"
+          : "text-gray-300 hover:bg-white/5 hover:text-white"
       }
-      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-[#fab31e]"
-    />
+    `}
+              >
+                Do Not Add Copy
+                <span className="block text-xs text-gray-400">(No Copy)</span>
+              </button>
 
-    {/* DESCRIPTION */}
-    <input
-      placeholder="Description (optional)"
-      value={customCopy.description}
-      onChange={(e) =>
-        setCustomCopy({ ...customCopy, description: e.target.value })
+              {/* DEFAULT */}
+              <button
+                onClick={() => {
+                  setCopyMode("default");
+                  setShowCopyPopup(false);
+                }}
+                className={`text-left px-4 py-3 rounded-xl transition 
+      border border-transparent
+      ${
+        copyMode === "default"
+          ? "bg-white/10 border-[#fab31e] text-white"
+          : "text-gray-300 hover:bg-white/5 hover:text-white"
       }
-      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-[#fab31e]"
-    />
+    `}
+              >
+                Default Copy
+                <span className="block text-xs text-gray-400">
+                  (From Reference Image)
+                </span>
+              </button>
 
-    {/* PRICE + CTA ROW */}
-    <div className="flex gap-2">
-      <input
-        placeholder="Price"
-        value={customCopy.price}
-        onChange={(e) =>
-          setCustomCopy({ ...customCopy, price: e.target.value })
-        }
-        className="w-1/2 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-[#fab31e]"
-      />
+              {/* CUSTOM */}
+              <button
+                onClick={() => setCopyMode("custom")}
+                className={`text-left px-4 py-3 rounded-xl transition 
+      border border-transparent
+      ${
+        copyMode === "custom"
+          ? "bg-white/10 border-[#fab31e] text-white"
+          : "text-gray-300 hover:bg-white/5 hover:text-white"
+      }
+    `}
+              >
+                Custom Copy
+                <span className="block text-xs text-gray-400">
+                  Add your own text
+                </span>
+              </button>
+            </div>
 
-      <input
-        placeholder="CTA (e.g. Buy Now)"
-        value={customCopy.cta}
-        onChange={(e) =>
-          setCustomCopy({ ...customCopy, cta: e.target.value })
-        }
-        className="w-1/2 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-[#fab31e]"
-      />
-    </div>
+            {/* CUSTOM FORM */}
+            {copyMode === "custom" && (
+              <div className="mt-5 flex flex-col gap-3">
+                {/* TITLE */}
+                <input
+                  placeholder="Title (required)"
+                  value={customCopy.title}
+                  onChange={(e) =>
+                    setCustomCopy({ ...customCopy, title: e.target.value })
+                  }
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-[#fab31e]"
+                />
 
-    {/* SAVE BUTTON */}
-    {/* <button
+                {/* DESCRIPTION */}
+                <input
+                  placeholder="Description (optional)"
+                  value={customCopy.description}
+                  onChange={(e) =>
+                    setCustomCopy({
+                      ...customCopy,
+                      description: e.target.value,
+                    })
+                  }
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-[#fab31e]"
+                />
+
+                {/* PRICE + CTA ROW */}
+                <div className="flex gap-2">
+                  <input
+                    placeholder="Price"
+                    value={customCopy.price}
+                    onChange={(e) =>
+                      setCustomCopy({ ...customCopy, price: e.target.value })
+                    }
+                    className="w-1/2 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-[#fab31e]"
+                  />
+
+                  <input
+                    placeholder="CTA (e.g. Buy Now)"
+                    value={customCopy.cta}
+                    onChange={(e) =>
+                      setCustomCopy({ ...customCopy, cta: e.target.value })
+                    }
+                    className="w-1/2 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-[#fab31e]"
+                  />
+                </div>
+
+                {/* SAVE BUTTON */}
+                {/* <button
       onClick={() => setShowCopyPopup(false)}
       className="mt-2 bg-[#fab31e] hover:opacity-90 text-black font-semibold py-2 rounded-xl transition"
     >
       Save Copy
     </button> */}
 
+                <div className="flex items-center">
+                  <Button
+                    onClick={() => setShowCopyPopup(false)}
+                    text="Save Copy"
+                    className="text-white"
+                  />
+                </div>
+              </div>
+            )}
 
-    <div className="flex items-center">
-       <Button
-         onClick={() => setShowCopyPopup(false)}
-        text="Save Copy"
-        className="text-white" 
-        /> 
-       </div>
-
-  </div>
-)}
-
-       <div className="absolute right-0 top-0 h-full w-3 sm:w-5 md:w-5  candy-border"></div>
-
+            <div className="absolute right-0 top-0 h-full w-3 sm:w-5 md:w-5  candy-border"></div>
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-)}
-</div>
   );
 }

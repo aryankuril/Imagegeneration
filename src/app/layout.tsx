@@ -65,11 +65,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${miso.variable} ${poppins.variable}`}>
+    <html
+      lang="en"
+      className={`${miso.variable} ${poppins.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <link rel="icon" href="images/favicon.png" type="image/png" />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <SmoothScroll>
         {children}
         </SmoothScroll>
