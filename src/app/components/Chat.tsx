@@ -27,6 +27,24 @@ const imageStringToBlob = async (image: string) => {
   return response.blob();
 };
 
+const downloadImageToDevice = (image: string, fileName: string) => {
+  const imageSrc = getImageSrc(image);
+  const link = document.createElement("a");
+  const downloadParams = new URLSearchParams({
+    url: imageSrc,
+    filename: fileName,
+  });
+  const downloadUrl = imageSrc.startsWith("http")
+    ? `/api/download-image?${downloadParams.toString()}`
+    : imageSrc;
+
+  link.href = downloadUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
+
 const extractGeneratedImages = (data: GeneratedImageResponse) => {
   if (Array.isArray(data)) {
     return data
@@ -177,6 +195,15 @@ export default function Chat() {
   const increase = () => setVariation((prev) => Math.min(prev + 1, 4));
   const decrease = () => setVariation((prev) => Math.max(prev - 1, 1));
 
+  const handleDownloadImage = async (image: string, index: number) => {
+    try {
+      downloadImageToDevice(image, `image-${index + 1}.png`);
+    } catch (error) {
+      console.error(error);
+      alert("Unable to download image");
+    }
+  };
+
   return (
     <div className="min-h-screen text-white relative overflow-hidden pb-40">
       {generatedImages.length > 0 || loading ? (
@@ -201,12 +228,13 @@ export default function Chat() {
                 />
 
                 {/* DOWNLOAD ICON */}
-                <a
-                  href={getImageSrc(img)}
-                  download={`image-${i}.png`}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadImage(img, i)}
                   className="absolute top-3 right-3 
                        opacity-0 group-hover:opacity-100 
                        transition duration-300"
+                  aria-label={`Download image ${i + 1}`}
                 >
                   <div
                     className="w-10 h-10 flex items-center justify-center 
@@ -218,7 +246,7 @@ export default function Chat() {
                   >
                     <Download size={18} />
                   </div>
-                </a>
+                </button>
               </div>
             ))}
           </div>
