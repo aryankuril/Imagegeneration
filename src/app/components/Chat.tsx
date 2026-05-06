@@ -86,8 +86,7 @@ export default function Chat() {
 
   const [showCopyPopup, setShowCopyPopup] = useState(false);
 
-  const CHAT_API_URL =
-    "https://imggenerationn.app.n8n.cloud/webhook-test/c554ca4f-1160-467a-aad4-2a2638f646f2";
+  const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL as string;
 
 
     const fetchImages = async () => {
@@ -302,7 +301,7 @@ useEffect(() => {
     </button>
 
     {/* DELETE ICON */}
-    <button
+    {/* <button
       type="button"
       onClick={() => handleDeleteImage(img, i)}
       className="absolute top-14 right-3 
@@ -317,7 +316,7 @@ useEffect(() => {
                 transition shadow-lg text-white">
         🗑
       </div>
-    </button>
+    </button> */}
   </div>
 ))}
           </div>
