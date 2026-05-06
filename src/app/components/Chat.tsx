@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState ,useEffect } from "react";
 import Button from "./Button";
 import { Download } from "lucide-react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 
@@ -25,6 +25,24 @@ const imageStringToBlob = async (image: string) => {
   }
 
   return response.blob();
+};
+
+const downloadImageToDevice = (image: string, fileName: string) => {
+  const imageSrc = getImageSrc(image);
+  const link = document.createElement("a");
+  const downloadParams = new URLSearchParams({
+    url: imageSrc,
+    filename: fileName,
+  });
+  const downloadUrl = imageSrc.startsWith("http")
+    ? `/api/download-image?${downloadParams.toString()}`
+    : imageSrc;
+
+  link.href = downloadUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 };
 
 const extractGeneratedImages = (data: GeneratedImageResponse) => {
@@ -49,11 +67,12 @@ export default function Chat() {
   const [description, setDescription] = useState("");
   const [productImage, setProductImage] = useState<File | null>(null);
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
-  const [aspectRatio, setAspectRatio] = useState("auto");
+  const [aspectRatio, setAspectRatio] = useState("Auto");
   const [variation, setVariation] = useState(1);
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [showPopup, setShowPopup] = useState(false);
+  const [showAspectDropdown, setShowAspectDropdown] = useState(false);
   const [copyMode, setCopyMode] = useState<"none" | "default" | "custom">(
     "none"
   );
@@ -69,6 +88,32 @@ export default function Chat() {
 
   const CHAT_API_URL =
     "https://imggenerationn.app.n8n.cloud/webhook-test/c554ca4f-1160-467a-aad4-2a2638f646f2";
+
+
+    const fetchImages = async () => {
+  try {
+    const q = query(
+      collection(db, "generatedImages"),
+      orderBy("createdAt", "desc")
+    );
+
+    const snapshot = await getDocs(q);
+
+    const allImages: any[] | ((prevState: string[]) => string[]) = [];
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+
+      if (data.imageUrls && Array.isArray(data.imageUrls)) {
+        allImages.push(...data.imageUrls);
+      }
+    });
+
+    setGeneratedImages(allImages);
+  } catch (err) {
+    console.error("Error fetching images:", err);
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,9 +218,47 @@ export default function Chat() {
       setLoading(false);
     }
   };
-
+useEffect(() => {
+  fetchImages();
+}, []);
   const increase = () => setVariation((prev) => Math.min(prev + 1, 4));
   const decrease = () => setVariation((prev) => Math.max(prev - 1, 1));
+
+
+
+    const handleDownloadImage = async (image: string, index: number) => {
+    try {
+      downloadImageToDevice(image, `image-${index + 1}.png`);
+    } catch (error) {
+      console.error(error);
+      alert("Unable to download image");
+    }
+  };
+
+
+  const handleDeleteImage = async (imgUrl: string, index: number) => {
+  if (!confirm("Delete this image?")) return;
+
+  try {
+    // Find and delete the Firestore doc containing this URL
+    const q = query(collection(db, "generatedImages"));
+    const snapshot = await getDocs(q);
+
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.includes(imgUrl)) {
+        await deleteDoc(doc(db, "generatedImages", docSnap.id));
+        break;
+      }
+    }
+
+    // Remove from local state
+    setGeneratedImages((prev) => prev.filter((_, i) => i !== index));
+  } catch (err) {
+    console.error("Delete failed:", err);
+    alert("Failed to delete image");
+  }
+};
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden pb-40">
@@ -189,38 +272,54 @@ export default function Chat() {
                 <div
                   key={`skeleton-${i}`}
                   className="w-full aspect-square rounded-xl 
-                       bg-gray-200/60 animate-pulse"
+                       bg-gray-300 animate-pulse"
                 />
               ))}
             {/* 🔥 EXISTING IMAGES */}
-            {generatedImages.map((img, i) => (
-              <div key={i} className="relative group">
-                <img
-                  src={getImageSrc(img)}
-                  className="w-full h-auto object-cover rounded-xl"
-                />
+          {generatedImages.map((img, i) => (
+  <div key={i} className="relative group">
+    <img
+      src={getImageSrc(img)}
+      className="w-full h-auto object-cover rounded-xl"
+    />
 
-                {/* DOWNLOAD ICON */}
-                <a
-                  href={getImageSrc(img)}
-                  download={`image-${i}.png`}
-                  className="absolute top-3 right-3 
-                       opacity-0 group-hover:opacity-100 
-                       transition duration-300"
-                >
-                  <div
-                    className="w-10 h-10 flex items-center justify-center 
-                            rounded-full 
-                            bg-black/50 backdrop-blur-md 
-                            border border-white/20 
-                            hover:bg-[#fab31e] hover:text-black 
-                            transition shadow-lg"
-                  >
-                    <Download size={18} />
-                  </div>
-                </a>
-              </div>
-            ))}
+    {/* DOWNLOAD ICON */}
+    <button
+      type="button"
+      onClick={() => handleDownloadImage(img, i)}
+      className="absolute top-3 right-3 
+           opacity-0 group-hover:opacity-100 
+           transition duration-300"
+      aria-label={`Download image ${i + 1}`}
+    >
+      <div className="w-10 h-10 flex items-center justify-center 
+                rounded-full bg-black/50 backdrop-blur-md 
+                border border-white/20 
+                hover:bg-[#fab31e] hover:text-black 
+                transition shadow-lg">
+        <Download size={18} />
+      </div>
+    </button>
+
+    {/* DELETE ICON */}
+    <button
+      type="button"
+      onClick={() => handleDeleteImage(img, i)}
+      className="absolute top-14 right-3 
+           opacity-0 group-hover:opacity-100 
+           transition duration-300"
+      aria-label={`Delete image ${i + 1}`}
+    >
+      <div className="w-10 h-10 flex items-center justify-center 
+                rounded-full bg-black/50 backdrop-blur-md 
+                border border-white/20 
+                hover:bg-red-500 hover:text-white 
+                transition shadow-lg text-white">
+        🗑
+      </div>
+    </button>
+  </div>
+))}
           </div>
         </div>
       ) : (
@@ -254,174 +353,138 @@ export default function Chat() {
       )}
 
       {/* 🔥 FLOATING INPUT BAR */}
-      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 w-full max-w-5xl px-4 z-50">
-        <div className="bg-[#1D1D1D]/80 backdrop-blur-xl border border-white/10 rounded-[20px] w-full p-4 flex items-center gap-4 shadow-2xl">
-          {/* 🔹 IMAGE UPLOADS */}
-          <div className="flex gap-4">
-            {/* PRODUCT IMAGE */}
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-gray-400">Product</span>
-
-              <label className="relative w-14 h-14 bg-black/40 rounded-xl flex items-center justify-center cursor-pointer overflow-visible">
-                {productImage ? (
-                  <>
-                    <img
-                      src={URL.createObjectURL(productImage)}
-                      className="w-full h-full object-cover rounded-xl"
-                    />
-
-                    {/* ❌ HALF OUTSIDE BUTTON */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setProductImage(null);
-                      }}
-                      className="absolute -top-1 -right-1 bg-black border border-white/20 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] hover:bg-red-500 z-10"
-                    >
-                      ✕
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-lg text-white">+</span>
-                )}
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setProductImage(e.target.files ? e.target.files[0] : null)
-                  }
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {/* REFERENCE IMAGE */}
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-gray-400">Reference</span>
-
-              <label className="relative w-14 h-14 bg-black/40 rounded-xl flex items-center justify-center cursor-pointer overflow-visible">
-                {referenceImage ? (
-                  <>
-                    <img
-                      src={URL.createObjectURL(referenceImage)}
-                      className="w-full h-full object-cover rounded-xl"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setReferenceImage(null);
-                      }}
-                      className="absolute -top-1 -right-1 bg-black border border-white/20 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] hover:bg-red-500 z-10"
-                    >
-                      ✕
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-lg text-white">+</span>
-                )}
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setReferenceImage(e.target.files ? e.target.files[0] : null)
-                  }
-                  className="hidden"
-                />
-              </label>
-            </div>
-          </div>
-          {/* 🔹 INPUT + CONTROLS */}
-          <div className="flex-1">
-            {/* PROMPT */}
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the scene you imagine"
-              className="w-full bg-transparent outline-none text-sm  text-white mb-3 placeholder-grey-400"
-            />
-
-            {/* CONTROLS */}
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* MODEL */}
-              <div className="bg-black/40 px-4 py-2 text-white rounded-xl text-sm flex items-center gap-1">
-                <span className="text-highlight font-bold text-sm">G</span>
-                Nano Banana Pro
-              </div>
-
-              {/* ASPECT DROPDOWN */}
-              <select
-                value={aspectRatio}
-                onChange={(e) => setAspectRatio(e.target.value)}
-                className="bg-black/40 px-3 py-2 rounded-xl text-white text-sm outline-none"
-              >
-                <option value="auto">Auto</option>
-                <option value="1:1">1:1</option>
-                <option value="3:4">3:4</option>
-                <option value="4:3">4:3</option>
-                <option value="2:3">2:3</option>
-                <option value="3:2">3:2</option>
-                <option value="9:16">9:16</option>
-                <option value="16:9">16:9</option>
-                <option value="5:4">5:4</option>
-                <option value="4:5">4:5</option>
-                <option value="21:9">21:9</option>
-              </select>
-
-              {/* VARIATIONS */}
-              <div className="bg-black/40 px-4 py-2 text-white rounded-xl text-sm flex items-center gap-3">
-                <button onClick={decrease}>-</button>
-                <span>{variation}</span>
-                <button onClick={increase}>+</button>
-              </div>
-
-              <button
-                onClick={() => setShowCopyPopup(true)}
-                className="bg-black/40 px-4 py-2 rounded-xl text-sm"
-              >
-                Copy
-              </button>
-            </div>
-          </div>
-
-          {/* 🔹 GENERATE BUTTON */}
-          {/* <button
-      onClick={handleSubmit}
-      disabled={loading}
-      className="bg-lime-400 text-black font-semibold px-6 py-4 rounded-xl hover:opacity-90 transition"
-    >
-      {loading ? "Generating..." : `Generate ✨ ${variation}`}
-    </button> */}
-
-          <div className="flex items-center">
-            <Button
-              onClick={() => handleSubmit(new Event("submit") as any)}
-              disabled={loading}
-              text={loading ? "Generating..." : "Generate Images"}
-              className="text-white"
-            />
-          </div>
+     <div className="fixed bottom-5 left-1/2 -translate-x-1/2 w-full max-w-5xl px-4 z-50">
+  <div className="bg-[#1D1D1D]/80 backdrop-blur-xl border border-white/10 rounded-[20px] w-full p-3 md:p-4 flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4 shadow-2xl">
+    
+    {/* TOP ROW on mobile: uploads + button */}
+    <div className="flex items-center justify-between w-full md:w-auto md:justify-start gap-4">
+      {/* 🔹 IMAGE UPLOADS */}
+      <div className="flex gap-4">
+        {/* PRODUCT IMAGE */}
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[10px] text-gray-400">Product</span>
+          <label className="relative w-12 h-12 md:w-14 md:h-14 bg-black/40 rounded-xl flex items-center justify-center cursor-pointer overflow-visible">
+            {productImage ? (
+              <>
+                <img src={URL.createObjectURL(productImage)} className="w-full h-full object-cover rounded-xl" />
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setProductImage(null); }}
+                  className="absolute -top-1 -right-1 bg-black border border-white/20 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] hover:bg-red-500 z-10"
+                >✕</button>
+              </>
+            ) : (
+              <span className="text-lg text-white">+</span>
+            )}
+            <input type="file" accept="image/*" onChange={(e) => setProductImage(e.target.files ? e.target.files[0] : null)} className="hidden" />
+          </label>
         </div>
 
-        {/* POPUP SAME */}
-        {/* {showPopup && (
-    <div className="p-5 fixed inset-0 bg-black/60 flex items-center justify-center z-[200]">
-      <div className="bg-[#1D1D1D] rounded-[20px] max-w-lg w-full p-7">
-        <h3 className="text-xl font-semibold mb-2">
-          ✅ Request Sent Successfully
-        </h3>
-        <p className="text-sm">
-          Wait few minutes till the image is rendered.
-        </p>
+        {/* REFERENCE IMAGE */}
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[10px] text-gray-400">Reference</span>
+          <label className="relative w-12 h-12 md:w-14 md:h-14 bg-black/40 rounded-xl flex items-center justify-center cursor-pointer overflow-visible">
+            {referenceImage ? (
+              <>
+                <img src={URL.createObjectURL(referenceImage)} className="w-full h-full object-cover rounded-xl" />
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setReferenceImage(null); }}
+                  className="absolute -top-1 -right-1 bg-black border border-white/20 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] hover:bg-red-500 z-10"
+                >✕</button>
+              </>
+            ) : (
+              <span className="text-lg text-white">+</span>
+            )}
+            <input type="file" accept="image/*" onChange={(e) => setReferenceImage(e.target.files ? e.target.files[0] : null)} className="hidden" />
+          </label>
+        </div>
+      </div>
+
+      {/* GENERATE BUTTON — right side on mobile */}
+      <div className="flex items-center md:hidden">
+        <Button
+          onClick={() => handleSubmit(new Event("submit") as any)}
+          disabled={loading}
+          text={loading ? "Generating..." : "Generate"}
+          className="text-white"
+        />
       </div>
     </div>
-  )} */}
+
+    {/* 🔹 INPUT + CONTROLS */}
+    <div className="flex-1 w-full md:w-auto">
+      {/* PROMPT */}
+      <input
+        type="text"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Describe the scene you imagine"
+        className="w-full bg-transparent outline-none text-sm text-white mb-2 md:mb-3 placeholder-grey-400"
+      />
+
+      {/* CONTROLS */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* MODEL */}
+        <div className="hidden md:flex bg-black/40 px-3 md:px-4 py-1.5 md:py-2 text-white rounded-xl text-xs md:text-sm flex items-center gap-1">
+          <span className="text-highlight font-bold text-sm">G</span>
+          Nano Banana Pro
+        </div>
+
+        {/* ASPECT DROPDOWN */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowAspectDropdown((p) => !p)}
+            onBlur={() => setTimeout(() => setShowAspectDropdown(false), 150)}
+            className="bg-black/40 px-3 py-1.5 md:py-2 rounded-xl text-white text-xs md:text-sm flex items-center gap-2"
+          >
+            {aspectRatio}
+            <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {showAspectDropdown && (
+            <div className="absolute bottom-full mb-2 left-0 bg-[#1a1a1a] rounded-xl overflow-hidden shadow-2xl z-50 min-w-[80px]">
+              {["Auto","1:1","3:4","4:3","2:3","3:2","9:16","16:9","5:4","4:5","21:9"].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onMouseDown={() => { setAspectRatio(r); setShowAspectDropdown(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm transition ${aspectRatio === r ? "bg-[#fab31e] text-black font-semibold" : "text-white hover:bg-white/10"}`}
+                >{r}</button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* VARIATIONS */}
+        <div className="bg-black/40 px-3 md:px-4 py-1.5 md:py-2 text-white rounded-xl text-xs md:text-sm flex items-center gap-3">
+          <button onClick={decrease}>-</button>
+          <span>{variation}</span>
+          <button onClick={increase}>+</button>
+        </div>
+
+        <button
+          onClick={() => setShowCopyPopup(true)}
+          className="bg-black/40 px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-xs md:text-sm text-white"
+        >
+          Copy
+        </button>
       </div>
+    </div>
+
+    {/* GENERATE BUTTON — desktop only */}
+    <div className="hidden md:flex items-center">
+      <Button
+        onClick={() => handleSubmit(new Event("submit") as any)}
+        disabled={loading}
+        text={loading ? "Generating..." : "Generate Images"}
+        className="text-white"
+      />
+    </div>
+  </div>
+</div>
       {showCopyPopup && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-[#1D1D1D] rounded-[20px] relative overflow-hidden p-6 w-[400px]">
